@@ -11,7 +11,7 @@ class ParseIgnore():
 PIgnore = ParseIgnore()
 
 class Parsed():
-    """Storage object for the result of parsing a string.
+    """Storage class for the result of parsing a string.
     Contains: the parsed characters, the unparsed characters,
     and an error message"""
     def __init__(self,parsed="",left="",error="",result=None):
@@ -77,9 +77,10 @@ class ParseStr(Parser):
 class ParseRE(Parser):
     """ Parse a regex from the front of a string """
     ignore = False
-    REGEX = re.compile('')
+    regex = re.compile('')
+    expected = ''
     def __init__(self, regex=None, ignore=False):
-        self._regex = re.compile(regex) if regex else self.REGEX
+        self._regex = re.compile(regex) if regex else self.regex
         self.ignore = ignore
 
     def parse(self, string):
@@ -89,7 +90,7 @@ class ParseRE(Parser):
         if match:
             return Parsed(match.group(bool(match.groups())),
                           string[match.span()[1]:],"",result)
-        return Parsed("",string,"Expected match of /{}/"
+        return Parsed("",string,self.expected or "Expected match of /{}/"
                 .format(self._regex.pattern))
 
 """
@@ -100,10 +101,10 @@ class ParseObjectEither():
     """Object to store the successful result of the or'ing of parsers, if any,
     and which of the parsers succeeded"""
     def __init__(self,parsed,index):
-        self.result = parsed
+        self.choice = parsed
         self.index = index
     def __repr__(self):
-        return "Option({}: {})".format(self.index,self.result)
+        return "Option({}: {})".format(self.index,self.choice)
 
 class ParseOr(Parser):
     """Parser that tries 2 parsers and succeeds if either succeeds"""
@@ -183,10 +184,10 @@ class Ignore(Parser):
 
 """Common utility parsers"""
 class String(ParseRE):
-    REGEX = re.compile(r'"([^"]*)"')
+    regex = re.compile(r'"([^"]*)"')
 
 class Int(ParseRE):
-    REGEX = re.compile(r'-?[0-9]+')
+    regex = re.compile(r'-?[0-9]+')
     def parse(self, string):
         Parser.PARSES +=1
         result = super().parse(string)
@@ -195,7 +196,7 @@ class Int(ParseRE):
         return result
 
 class Float(ParseRE):
-    REGEX = re.compile(r'-?[0-9]*\.?[0-9]+')
+    regex = re.compile(r'-?[0-9]*\.?[0-9]+')
     def parse(self, string):
         Parser.PARSES +=1
         result = super().parse(string)
@@ -204,7 +205,7 @@ class Float(ParseRE):
         return result
 
 class Bool(ParseRE):
-    REGEX = re.compile(r'(true|false)')
+    regex = re.compile(r'(true|false)')
 
 class Spaces(Parser):
     """Parse spaces and discard the result"""
@@ -222,9 +223,13 @@ class SpacesAround(Parser):
         p = Spaces() & self._other & Spaces()
         return p.parse(string)
 
-def Delim(string):
+class Delim(ParseRE):
     """Use a string as a delimiter, parsing it and any spaces around it"""
-    return ParseRE(r'\s*{}\s*'.format(re.escape(string)),ignore=True) 
+    def __init__(self,string):
+        self.expected = "Expected {}".format(string)
+        self._regex = re.compile(r'\s*{}\s*'.format(re.escape(string)))
+        self.ignore = True
+
 if __name__ == '__main__':
     p = ParseStr('[') & ParseInt() & ParseStr(']')
     print(p,p._parsers,p.parse("[5]"))

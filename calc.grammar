@@ -5,5 +5,5 @@ term :: val "*" term {return ops[parsed[1]](val,term)}
         | val {return val};
 val :: num {return num}
         | "(" expr ")" {return expr};
-num :: /-?[0-9]+/ {return int(parsed[0])}
+num :: /-?[0-9]+/ {return int(parsed[0])};
 %%
