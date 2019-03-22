@@ -1,0 +1,23 @@
+%%
+grammar :: "%%" rules "%%";
+rule :: rule ";" rules
+      | rule ";"
+rule :: id "::" sequences;
+
+
+sequences :: sequence "|" sequences
+        | sequence;
+
+sequence :: lexers function
+        | lexers;
+
+function :: "{" pylit "}";
+pylit :: /[^{}]*/;
+
+lexers :: lexer lexers
+        | lexer;
+lexer :: id | strlit | regex;
+strlit :: '"' /[^""]*/ '"';
+regex :: "/"/[^/]* "/";
+id :: /[a-zA-Z_][a-zA-Z0-9_]*/;
+%%

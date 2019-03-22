@@ -1,61 +1,98 @@
 from pyrd import *
+import sys
 
-def IgnoreSp(parser):
-   return Ignore(SpacesAround(parser)) 
-
-class ParseArray(Parser):
-    def parse(self,string):
-        result = (IgnoreSp(ParseA("[")) & 
-                  ParseElems() & 
-                  IgnoreSp(ParseA("]")))(string)
-        return result
-
-class ParseElems(Parser):
-    def parse(self,string):
-        result = ((ParseValue() & IgnoreSp(ParseA(',')) & ParseElems()) | 
-                   ParseValue())(string)
-        return result
-
-class ParseObject(Parser):
+class Array(Parser):
     def parse(self, string):
-        result = (IgnoreSp(ParseA("{")) &
-                  ParsePairs() &
-                  IgnoreSp(ParseA("}")))(string)
-        return result
+        Parser.PARSES +=1
+        parsed = (Delim("[") & 
+                  Elems() & 
+                  Delim("]")).parse(string)
+        if parsed:
+            parsed.result = parsed.result[0][::-1]
+        return parsed 
 
-class ParsePairs(Parser):
+class Elems(Parser):
     def parse(self, string):
-        result = ((ParsePair() & IgnoreSp(ParseA(',')) & ParsePairs()) | 
-                   ParsePair())(string)
-        if result:
-            if result.result.value == 1:
-                #extract the pair from its Option object
-                result.result = result.result.result
+        Parser.PARSES +=1
+        parsed = (Value() & Delim(',') & Elems() | 
+                  Value()).parse(string)
+        if parsed:
+            if parsed.result.index == 1:
+                parsed.result = [parsed.result.result]
             else:
-                #combine the new dictionary with the existing one
-                new, old = result.result.result
-                new.update(old)
-                result.result = new
-        return result
+                #append the new object to the existing list
+                value, elems = parsed.result.result
+                elems.append(value)
+                parsed.result = elems
+        return parsed 
 
-class ParsePair(Parser):
+class Object(Parser):
     def parse(self, string):
-        result = (ParseString() & IgnoreSp(ParseA(':')) & 
-                 ParseValue())(string)
-        if result:
-            result.result = {result.result[0]:result.result[1]}
-        return result
+        Parser.PARSES +=1
+        parsed = (Delim("{") &
+                  Pairs() &
+                  Delim("}")).parse(string)
+        if parsed:
+            parsed.result = parsed.result[0]
+        return parsed
 
-class ParseValue(Parser):
-    def parse(self,string):
-        result = (ParseInt() | ParseFloat() | 
-                  ParseString() | ParseBool() |
-                  ParseArray())(string)
-        # oh god
+class Pairs(Parser):
+    def parse(self, string):
+        Parser.PARSES +=1
+        parsed = ((Pair() & Delim(',')) & Pairs() | 
+                   Pair()).parse(string)
+        if parsed:
+            if parsed.result.index == 1:
+                #extract the value from its Option object
+                parsed.result = parsed.result.result
+            else:
+                #append the new object to the existing list
+                pair, pairs = parsed.result.result
+                pair.update(pairs)
+                parsed.result = pair
+        return parsed 
+
+class Pair(Parser):
+    def parse(self, string):
+        Parser.PARSES +=1
+        parsed = (String() & Delim(':') & 
+                 Value()).parse(string)
+        if parsed:
+            parsed.result = {parsed.result[0]:parsed.result[1]}
+        return parsed
+
+class Null(ParseStr):
+    def __init__(self):
+        self._chars = "null"
+
+    def parse(self, string):
+        Parser.PARSES +=1
+        parsed = super().parse(string)
+        if parsed:
+            parsed.result = None
+        return parsed
+
+class Value(Parser):
+    def parse(self, string):
+        Parser.PARSES +=1
+        result = (Int()    | Float() | 
+                  String() | Bool()  |
+                  Array()  | Null()  |
+                  Object()).parse(string)
         if result:
             result.result = result.result.result
+        else:
+            result.error = "Expected a value"
+            result.left = string
         return result
 
 
 if __name__ == '__main__':
-    print(ParsePairs()('"foo":5,"bar":6,"baz": 7'))
+    with open(sys.argv[1]) as jsonf:
+        to_parse = jsonf.read()
+        parsed = Value().parse(to_parse)
+        if parsed:
+            print(parsed.result)
+        else:
+            print(parsed)
+        print(Parser.PARSES)
