@@ -36,10 +36,31 @@ class Sequence(Parser):
 class Function(Parser):
     def parse(self, string):
         parsed = (Delim('{') & PyLit() & Delim('}')).parse(string)
+        if parsed:
+            parsed.result = parsed.result[0]
         return parsed
 
-class PyLit(ParseRE):
-    REGEX = re.compile(r'[^{}]*')
+class PyLit(Parser):
+    def parse(self, string):
+        parsed = (PyStr() & PyBrack() & PyLit()
+                  | PyStr()).parse(string)
+        if parsed:
+            if parsed.result.index == 0:
+                parsed.result = ''.join(parsed.result.choice.results)
+            else:
+                parsed.result = parsed.result.choice
+        return parsed
+
+
+class PyStr(ParseRE):
+    regex = re.compile(r'[^{}]*')
+
+class PyBrack(Parser):
+    def parse(self, string):
+        parsed = (Delim('{') & PyLit() & Delim('}')).parse(string)
+        if parsed:
+            parsed.result = '{{{}}}'.format(parsed.result[0])
+        return parsed
 
 class Lexers(Parser):
     def parse(self,string):
@@ -52,12 +73,16 @@ class Lexer(Parser):
         return parsed
 
 class Regex(ParseRE):
-    REGEX = re.compile(r"/([^/]*)/")
+    regex = re.compile(r"/([^/]*)/")
 
 class Id(ParseRE):
-    REGEX = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*")
+    regex = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*")
 
 if __name__=='__main__':
+    print(Function().parse("{return {'foo':5}}"))
+    print(Function().parse("{return [5,6,7]}"))
+    print(Function().parse("{return {'foo':{'bar':'baz'}}}"))
+    exit(0)
     with open(sys.argv[1]) as gramf:
         to_parse = gramf.read()
         parsed = Grammar().parse(to_parse)
