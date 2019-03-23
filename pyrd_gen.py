@@ -82,8 +82,9 @@ class RuleResult():
         return code
 
 class GrammarResult():
-    def __init__(self,rules):
+    def __init__(self,rules,suffix):
         self.rules = rules
+        self.suffix=suffix
 
     def __repr__(self):
         rules = '\n'.join('  {}'.format(r) for r in self.rules)
@@ -103,4 +104,4 @@ class GrammarResult():
             classes = [r.gen_code() for r in self.rules]
             for class_ in classes:
                 outpy.write(class_)
-            outpy.write(SUFFIX) 
+            outpy.write(self.suffix) 

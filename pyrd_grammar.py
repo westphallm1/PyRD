@@ -11,10 +11,15 @@ class Program(Parser):
 
 class Grammar(Parser):
     def parse(self,string):
-        parsed = (Delim("%%") & Rules() & Delim("%%")).parse(string)
+        parsed = (Delim("%%") & Rules() & Delim("%%") 
+                & PySuffix()).parse(string)
         if parsed:
-            parsed.result = GrammarResult(parsed.result[0][::-1])
+            parsed.result = GrammarResult(parsed.result[0][::-1],
+                                          parsed.result[1])
         return parsed
+
+class PySuffix(ParseRE):
+    regex = re.compile(r'.*',re.DOTALL)
 
 class Rules(Parser):
     def parse(self,string):
@@ -115,6 +120,7 @@ class Lexer(Parser):
 
 class Regex(ParseRE):
     regex = re.compile(r"/(\\/|[^/])*/")
+    group = slice(1,-1)
 
 class Id(ParseRE):
     regex = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*")

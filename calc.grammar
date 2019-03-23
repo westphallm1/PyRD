@@ -1,9 +1,23 @@
 %%
 expr :: term /[+-]/ expr {return ops[parsed[1]](term,expr)}
         | term {return term};
-term :: val "*" term {return ops[parsed[1]](val,term)}
+term :: val /[\*\/]/ term {return ops[parsed[1]](val,term)}
         | val {return val};
 val :: num {return num}
         | "(" expr ")" {return expr};
 num :: /-?[0-9]+/ {return int(parsed[0])};
 %%
+# Suffix - raw python code that will be appended to the program
+ops = {
+    '+':lambda x,y:x+y,
+    '-':lambda x,y:x-y,
+    '*':lambda x,y:x*y,
+    '/':lambda x,y:x/y,
+        }
+if __name__ == '__main__':
+    eqn = input()
+    expr = Expr().parse(eqn)
+    if expr:
+        print(expr.result)
+    else:
+        print(expr.err(eqn))
