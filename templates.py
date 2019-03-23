@@ -41,7 +41,7 @@ HANDLER_TEMPLATE = """\
 {CODE}
 """
 CHOICE_TEMPLATE = """\
-        if parsed_choice.index == {{}}:
+        if parsed_choice.index == {IDX}:
             {IDS}
             {FUNCTION}
 """

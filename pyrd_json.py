@@ -18,10 +18,10 @@ class Elems(Parser):
                   Value()).parse(string)
         if parsed:
             if parsed.result.index == 1:
-                parsed.result = [parsed.result.result]
+                parsed.result = [parsed.result.choice]
             else:
                 #append the new object to the existing list
-                value, elems = parsed.result.result
+                value, elems = parsed.result.choice
                 elems.append(value)
                 parsed.result = elems
         return parsed 
@@ -44,10 +44,10 @@ class Pairs(Parser):
         if parsed:
             if parsed.result.index == 1:
                 #extract the value from its Option object
-                parsed.result = parsed.result.result
+                parsed.result = parsed.result.choice
             else:
                 #append the new object to the existing list
-                pair, pairs = parsed.result.result
+                pair, pairs = parsed.result.choice
                 pair.update(pairs)
                 parsed.result = pair
         return parsed 
@@ -80,7 +80,7 @@ class Value(Parser):
                   Array()  | Null()  |
                   Object()).parse(string)
         if result:
-            result.result = result.result.result
+            result.result = result.result.choice
         else:
             result.error = "Expected a value"
             result.left = string

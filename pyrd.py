@@ -62,18 +62,6 @@ class Parser():
         """ Make a ParseAnd """
         return ParseAnd(self,other)
 
-class ParseStr(Parser):
-    """ Parse a set of characters """
-    def __init__(self,chars):
-        self._chars = chars
-
-    def parse(self, string):
-        Parser.PARSES +=1
-        if string.startswith(self._chars):
-            return Parsed(self._chars,string[len(self._chars):],"")
-        else:
-            return Parsed("",string,"Expected {}".format(self._chars))
-
 class ParseRE(Parser):
     """ Parse a regex from the front of a string """
     ignore = False
@@ -93,6 +81,11 @@ class ParseRE(Parser):
             return Parsed(parsed, string[match.span()[1]:],"",result)
         return Parsed("",string,self.expected or "Expected match of /{}/"
                 .format(self._regex.pattern))
+
+class ParseStr(ParseRE):
+    def __init__(self,string):
+        self.expected = "Expected {}".format(string)
+        self._regex = re.compile(re.escape(string))
 
 """
 Parsers for combining other parsers in sequence
@@ -114,14 +107,11 @@ class ParseOr(Parser):
 
     def parse(self, string):
         Parser.PARSES +=1
-        errors = []
         for i,parser in enumerate(self._parsers):
             parsed = parser.parse(string)
             if parsed:
                 parsed.result = ParseObjectEither(parsed.result,i)
                 return parsed
-            errors.append(parsed)
-        parsed.error=errors
         return parsed
 
     def __or__(self,other):
@@ -145,9 +135,10 @@ class ParseObjectBoth():
         return self.results.__getitem__(*args,**kwargs)
 
 class ParseAnd(Parser):
-    """Parser that tries 2 parsers and succeeds if both succeed"""
+    """Parser that tries 2 parsers and succeeds if both succeed.
+    Ignore the whitespace between them."""
     def __init__(self, p1, p2):
-        self._parsers = [p1, p2]
+        self._parsers = [spaces, p1, spaces, p2, spaces]
 
     def parse(self, string):
         Parser.PARSES +=1
@@ -165,6 +156,7 @@ class ParseAnd(Parser):
 
     def __and__(self,other):
         self._parsers.append(other)
+        self._parsers.append(spaces)
         return self
 
 
@@ -215,6 +207,8 @@ class Spaces(Parser):
         Parser.PARSES +=1
         p = ParseRE(r'\s*',ignore=True)
         return p.parse(string)
+
+spaces = Spaces()
 
 class SpacesAround(Parser):
     def __init__(self,other):

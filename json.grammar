@@ -1,28 +1,43 @@
 %%
-json :: value;
+json :: value {return value};
 
-object :: "`" pairs "`";
+object_ :: "{" pairs "}" {return pairs};
 
-pairs :: pair "," pairs `pair.update(pairs); return pair`
-         | pair `return pair`
-         ;
+pairs :: pair "," pairs {pair.update(pairs); return pair}
+         | pair {return pair};
 
-pair :: string ":" value `return {string: value`}
+pair :: string ":" value {return {string: value}}
         ;
 
-array :: "[" elems "]" `return elems[::-1]`
+array :: "[" elems "]" {return elems[::-1]}
          ;
 
-elems :: value "," elems `elems.append(value); return elems`
-        | value `return [value]`
+elems :: value "," elems {elems.append(value); return elems}
+        | value {return [value]}
         ;
 
-null :: "null" `return None`;
-value :: int | float | string | bool | array | null | object;
+value :: float_ {return float_} | 
+         int_ {return int_} |
+         string {return string} | 
+         bool_ {return bool_}   |
+         array {return array}  |
+         null {return null}     |
+         object_ {return object_};
 
-int :: /-?[0-9]+/ `return int(parsed[0])`;
-float :: /-?[0-9]+"."[0-9]*/ `return float(parsed[0])`;
-string :: '"' /[^""]*/ '"' `return parsed[1]`;
-bool :: "true" `return True`
-       | "false" `return False`;
+null :: "null" {return None};
+int_ :: /-?[0-9]+/ {return int(parsed[0])};
+float_ :: /-?[0-9]*\.?[0-9]+/ {return float(parsed[0])};
+string :: "\"" /[^"]*/ "\"" {return parsed[1]};
+bool_ :: "true" {return True}
+       | "false" {return False};
 %%
+import sys
+
+if __name__ == '__main__':
+    with open(sys.argv[1]) as jsonf:
+        json = jsonf.read()
+        parsed = Json().parse(json)
+        if parsed:
+            print(parsed.result)
+        else:
+            print(parsed.err(json))

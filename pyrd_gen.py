@@ -43,14 +43,14 @@ class SeqResult():
     def gen_parser(self):
         return ' & '.join([l.gen_parser() for l in self.lexers])
 
-    def gen_handler(self):
+    def gen_handler(self,idx):
         ids = []
         for i,l in enumerate(self.lexers):
             line = l.gen_handler()
             if line:
                 ids.append(line.format(i))
         ids = ('\n'+' '*12).join(ids)
-        return CHOICE_TEMPLATE.format(IDS=ids,FUNCTION=self.function)
+        return CHOICE_TEMPLATE.format(IDS=ids,FUNCTION=self.function,IDX=idx)
 
 
 class RuleResult():
@@ -70,7 +70,7 @@ class RuleResult():
     def gen_handler(self):
         parsers = []
         for i,sequence in enumerate(self.sequences): 
-            parsers.append(sequence.gen_handler().format(i))
+            parsers.append(sequence.gen_handler(i))
 
         return HANDLER_TEMPLATE.format(CODE=''.join(parsers))
 
