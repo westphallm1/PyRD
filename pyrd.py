@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Recursive descent parser in python"""
-
 import re
 
 class ParseIgnore():
@@ -107,11 +106,15 @@ class ParseOr(Parser):
 
     def parse(self, string):
         Parser.PARSES +=1
+        errors = []
         for i,parser in enumerate(self._parsers):
             parsed = parser.parse(string)
             if parsed:
                 parsed.result = ParseObjectEither(parsed.result,i)
                 return parsed
+            errors.append(parsed)
+        # find the parser that got farthest along in the parse and return it
+        parsed = min(errors,key=lambda x:len(x.left))
         return parsed
 
     def __or__(self,other):
@@ -207,7 +210,6 @@ class Spaces(Parser):
         Parser.PARSES +=1
         p = ParseRE(r'\s*',ignore=True)
         return p.parse(string)
-
 spaces = Spaces()
 
 class SpacesAround(Parser):

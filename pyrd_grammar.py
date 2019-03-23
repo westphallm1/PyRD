@@ -5,9 +5,6 @@ import sys
 import re
 
 """ Parsers """
-class Program(Parser):
-    def parse(self, string):
-        parsed = (Prefix() & Grammar() & Suffix()).parse(string)
 
 class Grammar(Parser):
     def parse(self,string):
@@ -19,7 +16,7 @@ class Grammar(Parser):
         return parsed
 
 class PySuffix(ParseRE):
-    regex = re.compile(r'.*',re.DOTALL)
+    regex = re.compile(r'(\n|[^\n])*')
 
 class Rules(Parser):
     def parse(self,string):
@@ -115,7 +112,8 @@ class Lexer(Parser):
     def parse(self,string):
         parsed = SpacesAround(Id() | String() | Regex()).parse(string)
         if parsed:
-            parsed.result = LexResult(parsed.result.results[0])
+            parsed.result = LexResult(parsed.result.results[0].index,
+                                      parsed.result.results[0].choice)
         return parsed
 
 class Regex(ParseRE):
@@ -130,9 +128,10 @@ if __name__=='__main__':
         to_parse = gramf.read()
         parsed = Grammar().parse(to_parse)
         if parsed:
-            print(parsed.result)
+            print("Grammar parsed sucessfully.")
             parsed.result.gen_code(sys.argv[2])
         else:
             print("Error:",parsed.err(to_parse))
+            exit(1)
 
 

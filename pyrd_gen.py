@@ -1,16 +1,20 @@
 """Generate a pyrd parser for a given pyrd grammar"""
 from pyrd import * 
-from pyrd_grammar import *
 from templates import *
 import sys
 import re
+import logging
+
 def id2class(id_):
     return ''.join([id_[0].upper(),id_[1:]])
 """ Storage classes for the results of parsing various types """
 class LexResult():
-    def __init__(self,result):
-        self.index = result.index
-        self.choice = result.choice
+    used_ids = set()
+    def __init__(self,index,choice):
+        self.index = index
+        self.choice = choice
+        if self.index == 0:
+            LexResult.used_ids.add(self.choice)
 
     def __repr__(self):
         format_ = ["Id({})",'String("{}")',"Regex(/{}/)"][self.index]
@@ -29,6 +33,16 @@ class LexResult():
         if self.index == 0:
             return "{} = parsed_choice.choice[{{}}]".format(self.choice)
         return None
+
+    def check_left_recursion(self,id_):
+        if self.index == 0 and self.choice == id_:
+            logging.error("Rule {} is left-recursive! Please refactor grammar".
+                    format(self.choice))
+
+    def check_right_recursion(self,id_):
+        if self.index == 0 and self.choice == id_:
+            logging.info("Rule {} is right-recursive and can be unrolled".
+                    format(self.choice))
 
 class SeqResult():
     def __init__(self,lexers,function):
@@ -52,11 +66,19 @@ class SeqResult():
         ids = ('\n'+' '*12).join(ids)
         return CHOICE_TEMPLATE.format(IDS=ids,FUNCTION=self.function,IDX=idx)
 
+    def check_left_recursion(self,id_):
+        self.lexers[0].check_left_recursion(id_)
+
+    def check_right_recursion(self,id_):
+        self.lexers[-1].check_right_recursion(id_)
+
 
 class RuleResult():
+    defined_ids = set()
     def __init__(self,id_,sequences):
         self.id = id_
         self.sequences = sequences
+        RuleResult.defined_ids.add(self.id)
 
     def __repr__(self):
         seqs = '\n'.join('    {}'.format(s) for s in self.sequences)
@@ -81,6 +103,13 @@ class RuleResult():
                 HANDLER=handler, PARSER=parser)
         return code
 
+    def check_left_recursion(self):
+        [seq.check_left_recursion(self.id) for seq in self.sequences]
+
+    def check_right_recursion(self):
+        [seq.check_right_recursion(self.id) for seq in self.sequences]
+
+
 class GrammarResult():
     def __init__(self,rules,suffix):
         self.rules = rules
@@ -99,9 +128,31 @@ class GrammarResult():
         return handlers
 
     def gen_code(self,path):
+        classes = [r.gen_code() for r in self.rules]
+        self.check_errors()
         with open(path,'w') as outpy:
             outpy.write(PREFIX)
-            classes = [r.gen_code() for r in self.rules]
             for class_ in classes:
                 outpy.write(class_)
             outpy.write(self.suffix) 
+
+    def check_errors(self):
+        self.check_left_recursion()
+        self.check_right_recursion()
+        self.check_id_defs()
+
+    def check_left_recursion(self):
+        [r.check_left_recursion() for r in self.rules]
+
+    def check_right_recursion(self):
+        [r.check_right_recursion() for r in self.rules]
+
+    def check_id_defs(self):
+        undefined = LexResult.used_ids - RuleResult.defined_ids
+        unused = RuleResult.defined_ids - LexResult.used_ids
+        if undefined:
+            logging.error("The following ids are used but not defined: {}"
+                    .format(', '.join(list(undefined))))
+        if unused:
+            logging.warning("The following ids are defined but not used: {}"
+                    .format(', '.join(list(unused))))
