@@ -79,6 +79,7 @@ class ParseRE(Parser):
     ignore = False
     regex = re.compile('')
     expected = ''
+    group = slice(None,None)
     def __init__(self, regex=None, ignore=False):
         self._regex = re.compile(regex) if regex else self.regex
         self.ignore = ignore
@@ -88,8 +89,8 @@ class ParseRE(Parser):
         match = self._regex.match(string)
         result = PIgnore if self.ignore else None
         if match:
-            return Parsed(match.group(bool(match.groups())),
-                          string[match.span()[1]:],"",result)
+            parsed = match.group(0)[self.group]
+            return Parsed(parsed, string[match.span()[1]:],"",result)
         return Parsed("",string,self.expected or "Expected match of /{}/"
                 .format(self._regex.pattern))
 
@@ -100,8 +101,8 @@ Parsers for combining other parsers in sequence
 class ParseObjectEither():
     """Object to store the successful result of the or'ing of parsers, if any,
     and which of the parsers succeeded"""
-    def __init__(self,parsed,index):
-        self.choice = parsed
+    def __init__(self,result,index):
+        self.choice = result
         self.index = index
     def __repr__(self):
         return "Option({}: {})".format(self.index,self.choice)
@@ -184,7 +185,8 @@ class Ignore(Parser):
 
 """Common utility parsers"""
 class String(ParseRE):
-    regex = re.compile(r'"([^"]*)"')
+    regex = re.compile(r'"(\\"|[^"])*"')
+    group = slice(1,-1)
 
 class Int(ParseRE):
     regex = re.compile(r'-?[0-9]+')
@@ -231,5 +233,4 @@ class Delim(ParseRE):
         self.ignore = True
 
 if __name__ == '__main__':
-    p = ParseStr('[') & ParseInt() & ParseStr(']')
-    print(p,p._parsers,p.parse("[5]"))
+    print(String().parse('"5"'))

@@ -1,43 +1,8 @@
+"""Hand-written recursive descent parser for the pyrd grammar"""
 from pyrd import *
+from pyrd_gen import *
 import sys
 import re
-
-""" Storage classes for the results of parsing various types """
-class LexResult():
-    def __init__(self,result):
-        self.index = result.index
-        self.choice = result.choice
-
-    def __repr__(self):
-        format_ = ["Id({})",'String("{}")',"Regex(/{}/)"][self.index]
-        return format_.format(self.choice)
-
-class SeqResult():
-    def __init__(self,lexers,function):
-        self.lexers = lexers
-        self.function = function
-
-    def __repr__(self):
-        lexers = '\n'.join('      {}'.format(l) for l in self.lexers)
-        return "Sequence(function={{{}}},lexers=\n{})".format(
-                    self.function,lexers)
-
-class RuleResult():
-    def __init__(self,id_,sequences):
-        self.id = id_
-        self.sequences = sequences
-
-    def __repr__(self):
-        seqs = '\n'.join('    {}'.format(s) for s in self.sequences)
-        return "Rule(id={},sequences=\n{})".format(self.id,seqs)
-
-class GrammarResult():
-    def __init__(self,rules):
-        self.rules = rules
-
-    def __repr__(self):
-        rules = '\n'.join('  {}'.format(r) for r in self.rules)
-        return "Grammar(rules=\n{})".format(rules)
 
 """ Parsers """
 class Program(Parser):
@@ -149,7 +114,7 @@ class Lexer(Parser):
         return parsed
 
 class Regex(ParseRE):
-    regex = re.compile(r"/([^/]*)/")
+    regex = re.compile(r"/(\\/|[^/])*/")
 
 class Id(ParseRE):
     regex = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*")
@@ -160,5 +125,8 @@ if __name__=='__main__':
         parsed = Grammar().parse(to_parse)
         if parsed:
             print(parsed.result)
+            parsed.result.gen_code(sys.argv[2])
         else:
-            print(parsed.err(to_parse))
+            print("Error:",parsed.err(to_parse))
+
+
