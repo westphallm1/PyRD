@@ -23,6 +23,7 @@ def standardize_result(result):
 CLASS_TEMPLATE = """\
 class {ID}(Parser):
 {HANDLER}
+{HANDLER_RR}
 {PARSER}
 """
 
@@ -40,8 +41,26 @@ HANDLER_TEMPLATE = """\
         parsed = parsed_choice.choice
 {CODE}
 """
+
+RIGHT_RECURSIVE_TEMPLATE = """\
+    def handle_rr(self,parsed_choice):
+{CODE}
+"""
 CHOICE_TEMPLATE = """\
         if parsed_choice.index == {IDX}:
             {IDS}
             {FUNCTION}
+"""
+RR_CHOICE_TEMPLATE = """\
+        if parsed_choice.index == {IDX}:
+            def _helper(parsed_choice):
+                parsed = parsed_choice.choice
+                {IDS}
+                {FUNCTION}
+            base = parsed_choice.choice[0].base
+            for case in parsed_choice.choice[0].unrolled[::-1]:
+                case_choice = ParseObjectEither(case,0)
+                case_choice.choice.append(base)
+                base = _helper(case_choice)
+            return base
 """

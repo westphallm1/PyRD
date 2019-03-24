@@ -100,7 +100,7 @@ class ParseObjectEither():
         return "Option({}: {})".format(self.index,self.choice)
 
 class ParseOr(Parser):
-    """Parser that tries 2 parsers and succeeds if either succeeds"""
+    """Parser that tries a series of parsers and succeeds if any succeeds"""
     def __init__(self, p1, p2):
         self._parsers = [p1, p2]
 
@@ -132,13 +132,16 @@ class ParseObjectBoth():
             self.results.append(result)
 
     def __repr__(self):
-        return self.results.__repr__()
+        return "{}".format(self.results)
+
+    def __len__(self):
+        return len(self.results)
     
     def __getitem__(self,*args,**kwargs):
         return self.results.__getitem__(*args,**kwargs)
 
 class ParseAnd(Parser):
-    """Parser that tries 2 parsers and succeeds if both succeed.
+    """Parser that tries a series of parsers and succeeds if they all succeed.
     Ignore the whitespace between them."""
     def __init__(self, p1, p2):
         self._parsers = [spaces, p1, spaces, p2, spaces]
@@ -162,6 +165,42 @@ class ParseAnd(Parser):
         self._parsers.append(spaces)
         return self
 
+    def rr(self):
+        return ParseRightRecursive(self._parsers[:-2],self._parsers[-2])
+
+class ParseObjectRR():
+    """Object to store the successful unrolling of a right-recursive parser,
+    how many times it succeeded, and which base case was chosen"""
+    def __init__(self, unrolled, base):
+        self.unrolled = unrolled
+        self.base = base
+        self.successes = len(unrolled)
+
+    def __repr__(self):
+        return "RR({}:{},{})".format(self.successes,self.unrolled,self.base)
+
+class ParseRightRecursive(ParseAnd):
+    """Parse a right-recursive ParseAnd iteratively to save on precious
+    stack space"""
+    def __init__(self,parsers,terminator):
+        self._parsers = parsers
+        self.terminator = terminator
+
+    def parse(self, string):
+        parsed = super().parse(string)
+        results = ParseObjectBoth()
+        success = 0
+        while parsed:
+            success += 1
+            results.append(parsed.result)
+            string = parsed.left
+            parsed = super().parse(string)
+        if success:
+            parsed.error = ""
+            last = self.terminator.parse(string)
+            parsed.result = ParseObjectRR(results,last.result)
+            
+        return parsed
 
 
 """ Meta-parsers that take another parser as input """
