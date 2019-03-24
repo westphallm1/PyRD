@@ -1,4 +1,3 @@
-%%
 json :: value {return value};
 
 object_ :: "{" pairs "}" {return pairs};

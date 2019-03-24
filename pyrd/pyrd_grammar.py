@@ -1,6 +1,6 @@
 """Hand-written recursive descent parser for the pyrd grammar"""
-from pyrd import *
-from pyrd_gen import *
+from .pyrd import *
+from .pyrd_gen import *
 import sys
 import re
 
@@ -8,7 +8,7 @@ import re
 
 class Grammar(Parser):
     def parse(self,string):
-        parsed = (Delim("%%") & Rules() & Delim("%%") 
+        parsed = (Rules() & Delim("%%") 
                 & PySuffix()).parse(string)
         if parsed:
             parsed.result = GrammarResult(parsed.result[0][::-1],
@@ -122,16 +122,4 @@ class Regex(ParseRE):
 
 class Id(ParseRE):
     regex = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*")
-
-if __name__=='__main__':
-    with open(sys.argv[1]) as gramf:
-        to_parse = gramf.read()
-        parsed = Grammar().parse(to_parse)
-        if parsed:
-            print("Grammar parsed sucessfully.")
-            parsed.result.gen_code(sys.argv[2])
-        else:
-            print("Error:",parsed.err(to_parse))
-            exit(1)
-
 

@@ -182,15 +182,23 @@ class ParseObjectRR():
 class ParseRightRecursive(ParseAnd):
     """Parse a right-recursive ParseAnd iteratively to save on precious
     stack space"""
+    backtracking = False
     def __init__(self,parsers,terminator):
         self._parsers = parsers
         self.terminator = terminator
 
     def parse(self, string):
+        if ParseRightRecursive.backtracking:
+            # handle cases where we right-recursed one too far by 
+            # automatically failing to the next case
+            ParseRightRecursive.backtracking = False
+            return Parsed("",string,"Backtracking!")
+
         parsed = super().parse(string)
         results = ParseObjectBoth()
         success = 0
         while parsed:
+            last_string = string
             success += 1
             results.append(parsed.result)
             string = parsed.left
@@ -198,7 +206,13 @@ class ParseRightRecursive(ParseAnd):
         if success:
             parsed.error = ""
             last = self.terminator.parse(string)
+            if not last:
+                # We ate the base case: backtrack once and see if that works
+                results.results.pop()
+                ParseRightRecursive.backtracking = True
+                last = self.terminator.parse(last_string)
             parsed.result = ParseObjectRR(results,last.result)
+            parsed.error = last.error
             
         return parsed
 

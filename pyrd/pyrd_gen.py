@@ -1,6 +1,6 @@
 """Generate a pyrd parser for a given pyrd grammar"""
-from pyrd import * 
-from templates import *
+from .pyrd import * 
+from .templates import *
 import sys
 import re
 import logging

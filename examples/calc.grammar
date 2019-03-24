@@ -1,4 +1,3 @@
-%%
 expr :: term /[+-]/ expr {return ops[parsed[1]](term,expr)}
         | term {return term};
 term :: val /[\*\/]/ term {return ops[parsed[1]](val,term)}

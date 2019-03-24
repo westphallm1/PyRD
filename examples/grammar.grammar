@@ -1,5 +1,4 @@
-%%
-grammar :: "%%" rules "%%" suffix {return GrammarResult(rules[::-1],suffix)};
+grammar :: rules "%%" suffix {return GrammarResult(rules[::-1],suffix)};
 
 suffix :: /(\n|[^\n])*/ {return parsed[0]};
 
@@ -30,7 +29,7 @@ strlit :: "\"" /(\\"|[^"])*/ "\"" {return parsed[1]};
 regex :: "/" /(\\/|[^\/])*/ "/" {return parsed[1]};
 id :: /[a-zA-Z_][a-zA-Z0-9_]*/{return parsed[0]};
 %%
-from pyrd_gen import *
+from pyrd.pyrd_gen import *
 if __name__=='__main__':
     with open(sys.argv[1]) as gramf:
         to_parse = gramf.read()

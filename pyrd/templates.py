@@ -6,7 +6,7 @@ PREFIX ='''\
 ##
 ## pyrd 0.1.0
 ##
-from pyrd import *
+from pyrd.pyrd import *
 
 def standardize_result(result):
     """ Return a ParseObjectBoth inside of a ParseObjectEither
