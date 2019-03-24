@@ -37,7 +37,7 @@ An example parser that finds the maximum or minimum of a comma-separated list of
 might look like:
 ```python
 list     :: operator "(" items ")" {return ops[operator](items[::-1])};
-operator :: /(min|max)/ {return operator};
+operator :: /(min|max)/ {return parsed[0]};
 items    :: num "," items {items.append(num); return items}
           | num {return [num]};
 num      :: /-?[0-9]+/ {return int(parsed[0])};
